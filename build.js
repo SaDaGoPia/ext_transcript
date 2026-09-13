@@ -9,7 +9,7 @@ async function copyStaticFiles() {
   const staticEntries = [
     'manifest.json',
     'icons',
-    // 'background',
+    'background',
     // 'popup',
     // 'options',
     'lib',
