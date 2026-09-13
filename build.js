@@ -12,7 +12,7 @@ async function copyStaticFiles() {
     // 'background',
     // 'popup',
     // 'options',
-    // 'lib',
+    'lib',
     'offscreen/offscreen.html',
   ];
   for (const entry of staticEntries) {
