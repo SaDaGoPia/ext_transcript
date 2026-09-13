@@ -10,7 +10,7 @@ async function copyStaticFiles() {
     'manifest.json',
     'icons',
     'background',
-    // 'popup',
+    'popup',
     // 'options',
     'lib',
     'offscreen/offscreen.html',
