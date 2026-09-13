@@ -51,7 +51,7 @@ async function main() {
   await mkdir(DIST, { recursive: true });
   await copyStaticFiles();
   await bundleOffscreenScript();
-  // await copyOnnxWasm();
+  await copyOnnxWasm();
   await rewriteOffscreenHtmlScriptTag();
   console.log('Build complete: dist/');
 }
