@@ -3,7 +3,7 @@
   "name": "Tab Transcript",
   "version": "0.1.0",
   "description": "Records a browser tab's audio, transcribes it to Spanish text locally, and exports it as a .txt file or to Google Drive.",
-  "permissions": ["tabCapture", "offscreen", "storage", "identity", "downloads"],
+  "permissions": ["tabCapture", "offscreen", "storage", "identity", "downloads", "activeTab"],
   "host_permissions": ["https://www.googleapis.com/*"],
   "background": {
     "service_worker": "background/background.js",
@@ -28,6 +28,6 @@
     "scopes": ["https://www.googleapis.com/auth/drive.file"]
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self' https://apis.google.com; object-src 'self';"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval' https://apis.google.com; object-src 'self';"
   }
 }
