@@ -15,9 +15,11 @@ export function buildMultipartUploadBody(boundary, metadata, fileContent, mimeTy
 }
 
 export async function uploadTranscriptToDrive({ accessToken, folderId, filename, content, fetchImpl = fetch }) {
+  // Spanish transcripts contain accented characters, so the charset must be explicit.
+  const TRANSCRIPT_MIME_TYPE = 'text/plain; charset=UTF-8';
   const boundary = `tab_transcript_boundary_${Date.now()}`;
-  const metadata = { name: filename, parents: [folderId], mimeType: 'text/plain' };
-  const body = buildMultipartUploadBody(boundary, metadata, content, 'text/plain');
+  const metadata = { name: filename, parents: [folderId], mimeType: TRANSCRIPT_MIME_TYPE };
+  const body = buildMultipartUploadBody(boundary, metadata, content, TRANSCRIPT_MIME_TYPE);
 
   const response = await fetchImpl('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
     method: 'POST',
