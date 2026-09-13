@@ -21,7 +21,7 @@ export function loadPickerApi() {
   return pickerApiLoadPromise;
 }
 
-export function openFolderPicker({ oauthToken, developerKey }) {
+export function openFolderPicker({ oauthToken, developerKey, appId }) {
   return loadPickerApi().then(
     () =>
       new Promise((resolve) => {
@@ -33,6 +33,10 @@ export function openFolderPicker({ oauthToken, developerKey }) {
           .addView(view)
           .setOAuthToken(oauthToken)
           .setDeveloperKey(developerKey)
+          // Required for a drive.file-scoped app: without the Cloud project
+          // number, picking a folder does not grant this app access to it and
+          // the later files.create with parents:[folderId] fails with a 404.
+          .setAppId(appId)
           .setCallback((data) => {
             if (data.action === google.picker.Action.PICKED) {
               const folder = data.docs[0];

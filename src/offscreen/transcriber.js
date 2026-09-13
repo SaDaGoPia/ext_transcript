@@ -19,10 +19,18 @@ async function defaultPipelineFactory() {
   return cachedPipelinePromise;
 }
 
-export async function decodeBlobToFloat32Array(blob, audioContext = new AudioContext({ sampleRate: 16000 })) {
-  const arrayBuffer = await blob.arrayBuffer();
-  const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-  return audioBuffer.getChannelData(0);
+export async function decodeBlobToFloat32Array(blob, audioContext) {
+  // Chrome caps concurrent AudioContexts per document (6), so a context we
+  // created ourselves must be closed again. A caller-supplied one is left
+  // alone — it belongs to the caller.
+  const ctx = audioContext ?? new AudioContext({ sampleRate: 16000 });
+  try {
+    const arrayBuffer = await blob.arrayBuffer();
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+    return audioBuffer.getChannelData(0);
+  } finally {
+    if (!audioContext) await ctx.close();
+  }
 }
 
 export async function transcribeAudioBlob(blob, {
