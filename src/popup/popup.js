@@ -48,11 +48,17 @@ startStopButton.addEventListener('click', async () => {
     startStopButton.textContent = 'Stop Recording';
     isRecording = true;
 
-    const response = await chrome.runtime.sendMessage(
-      createMessage(MessageType.POPUP_START_RECORDING, { tabId: tab.id })
-    );
-    if (isMessageOfType(response, MessageType.ERROR)) {
-      statusEl.textContent = `Error: ${response.payload.message}`;
+    try {
+      const response = await chrome.runtime.sendMessage(
+        createMessage(MessageType.POPUP_START_RECORDING, { tabId: tab.id })
+      );
+      if (isMessageOfType(response, MessageType.ERROR)) {
+        statusEl.textContent = `Error: ${response.payload.message}`;
+        isRecording = false;
+        startStopButton.textContent = 'Start Recording';
+      }
+    } catch (error) {
+      statusEl.textContent = `Error: ${error.message}`;
       isRecording = false;
       startStopButton.textContent = 'Start Recording';
     }
@@ -60,23 +66,30 @@ startStopButton.addEventListener('click', async () => {
     statusEl.textContent = 'Transcribing…';
     startStopButton.disabled = true;
 
-    const response = await chrome.runtime.sendMessage(createMessage(MessageType.POPUP_STOP_RECORDING));
+    try {
+      const response = await chrome.runtime.sendMessage(createMessage(MessageType.POPUP_STOP_RECORDING));
 
-    startStopButton.disabled = false;
-    startStopButton.textContent = 'Start Recording';
-    isRecording = false;
+      startStopButton.disabled = false;
+      startStopButton.textContent = 'Start Recording';
+      isRecording = false;
 
-    if (isMessageOfType(response, MessageType.ERROR)) {
-      statusEl.textContent = `Error: ${response.payload.message}`;
-      return;
+      if (isMessageOfType(response, MessageType.ERROR)) {
+        statusEl.textContent = `Error: ${response.payload.message}`;
+        return;
+      }
+
+      lastTranscript = response.payload.text;
+      statusEl.textContent = 'Done';
+      transcriptEl.value = lastTranscript;
+      downloadButton.disabled = false;
+      uploadButton.disabled = false;
+      await saveTranscript({ text: lastTranscript, tabTitle: activeTabTitle });
+    } catch (error) {
+      startStopButton.disabled = false;
+      startStopButton.textContent = 'Start Recording';
+      isRecording = false;
+      statusEl.textContent = `Error: ${error.message}`;
     }
-
-    lastTranscript = response.payload.text;
-    statusEl.textContent = 'Done';
-    transcriptEl.value = lastTranscript;
-    downloadButton.disabled = false;
-    uploadButton.disabled = false;
-    await saveTranscript({ text: lastTranscript, tabTitle: activeTabTitle });
   }
 });
 
@@ -92,14 +105,19 @@ uploadButton.addEventListener('click', async () => {
   statusEl.textContent = 'Uploading to Drive…';
   const filename = buildTranscriptFilename(activeTabTitle);
 
-  const response = await chrome.runtime.sendMessage(
-    createMessage(MessageType.DRIVE_UPLOAD_REQUEST, { filename, content: lastTranscript })
-  );
+  try {
+    const response = await chrome.runtime.sendMessage(
+      createMessage(MessageType.DRIVE_UPLOAD_REQUEST, { filename, content: lastTranscript })
+    );
 
-  uploadButton.disabled = false;
-  statusEl.textContent = isMessageOfType(response, MessageType.ERROR)
-    ? `Upload failed: ${response.payload.message}`
-    : 'Uploaded to Drive';
+    uploadButton.disabled = false;
+    statusEl.textContent = isMessageOfType(response, MessageType.ERROR)
+      ? `Upload failed: ${response.payload.message}`
+      : 'Uploaded to Drive';
+  } catch (error) {
+    uploadButton.disabled = false;
+    statusEl.textContent = `Error: ${error.message}`;
+  }
 });
 
 restoreTranscript();
