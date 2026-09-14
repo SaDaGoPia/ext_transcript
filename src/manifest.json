@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Tab Transcript",
   "version": "0.1.0",
-  "description": "Records a browser tab's audio and transcribes it locally to Spanish text, exported as a .txt file.",
+  "description": "Graba el audio de una pestaña y lo transcribe localmente al español, exportado como archivo .txt.",
   "permissions": ["tabCapture", "offscreen", "storage", "downloads", "activeTab"],
   "background": {
     "service_worker": "background/background.js",

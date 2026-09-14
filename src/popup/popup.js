@@ -37,7 +37,7 @@ function setStatus(text, variant = 'default') {
 // without the user having to guess through a long, silent wait.
 function startElapsedTimer(startedAt) {
   stopElapsedTimer();
-  const tick = () => setStatus(`Recording… ${formatElapsed(Date.now() - startedAt)}`, 'recording');
+  const tick = () => setStatus(`Grabando… ${formatElapsed(Date.now() - startedAt)}`, 'recording');
   tick();
   elapsedTimerId = setInterval(tick, 1000);
 }
@@ -55,8 +55,8 @@ function setButtonState(state) {
   startStopButton.classList.toggle('is-recording', state === 'recording');
   startStopButton.classList.toggle('is-transcribing', state === 'transcribing');
   startStopButton.disabled = state === 'transcribing';
-  buttonLabel.textContent = state === 'transcribing' ? 'Transcribing…' : 'Start Recording';
-  if (state === 'recording') buttonLabel.textContent = 'Stop Recording';
+  buttonLabel.textContent = state === 'transcribing' ? 'Transcribiendo…' : 'Iniciar grabación';
+  if (state === 'recording') buttonLabel.textContent = 'Detener grabación';
 }
 
 async function restoreTranscript() {
@@ -67,7 +67,7 @@ async function restoreTranscript() {
   activeTabTitle = cached.tabTitle;
   transcriptEl.value = cached.text;
   downloadButton.disabled = false;
-  setStatus('Done — restored from your last recording');
+  setStatus('Listo — restaurado de tu última grabación');
   return true;
 }
 
@@ -87,7 +87,7 @@ async function restoreRecordingState() {
 startStopButton.addEventListener('click', async () => {
   if (!isRecording) {
     const tab = await getActiveTab();
-    activeTabTitle = tab.title ?? 'transcript';
+    activeTabTitle = tab.title ?? 'transcripción';
     setButtonState('recording');
     startElapsedTimer(Date.now());
 
@@ -98,17 +98,17 @@ startStopButton.addEventListener('click', async () => {
       if (isMessageOfType(response, MessageType.ERROR)) {
         stopElapsedTimer();
         setButtonState('idle');
-        setStatus(`Couldn't start recording — ${response.payload.message}`, 'error');
+        setStatus(`No se pudo iniciar la grabación — ${response.payload.message}`, 'error');
       }
     } catch (error) {
       stopElapsedTimer();
       setButtonState('idle');
-      setStatus(`Couldn't start recording — ${error.message}`, 'error');
+      setStatus(`No se pudo iniciar la grabación — ${error.message}`, 'error');
     }
   } else {
     stopElapsedTimer();
     setButtonState('transcribing');
-    setStatus('This can take a few minutes the first time');
+    setStatus('Esto puede tardar unos minutos la primera vez');
 
     try {
       const response = await chrome.runtime.sendMessage(
@@ -118,12 +118,12 @@ startStopButton.addEventListener('click', async () => {
       setButtonState('idle');
 
       if (isMessageOfType(response, MessageType.ERROR)) {
-        setStatus(`Couldn't transcribe — ${response.payload.message}`, 'error');
+        setStatus(`No se pudo transcribir — ${response.payload.message}`, 'error');
         return;
       }
 
       lastTranscript = response.payload.text;
-      setStatus('Done');
+      setStatus('Listo');
       transcriptEl.value = lastTranscript;
       downloadButton.disabled = false;
       // The offscreen document already saved this; re-saving the same data is
@@ -131,7 +131,7 @@ startStopButton.addEventListener('click', async () => {
       await saveTranscript({ text: lastTranscript, tabTitle: activeTabTitle });
     } catch (error) {
       setButtonState('idle');
-      setStatus(`Couldn't transcribe — ${error.message}`, 'error');
+      setStatus(`No se pudo transcribir — ${error.message}`, 'error');
     }
   }
 });
@@ -148,7 +148,7 @@ async function init() {
   // Last, so an in-progress recording's status wins over "Done — restored…".
   const isRecordingNow = await restoreRecordingState();
   if (!hasTranscript && !isRecordingNow) {
-    setStatus('Ready when you are');
+    setStatus('Listo cuando quieras');
   }
 }
 

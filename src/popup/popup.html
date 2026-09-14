@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
   <meta charset="utf-8" />
   <link rel="stylesheet" href="popup.css" />
@@ -43,20 +43,20 @@
 
     <button id="start-stop" class="primary-button">
       <span class="record-dot" aria-hidden="true"></span>
-      <span id="start-stop-label">Start Recording</span>
+      <span id="start-stop-label">Iniciar grabación</span>
     </button>
 
-    <p id="status" class="status-line" role="status" aria-live="polite">Ready when you are</p>
+    <p id="status" class="status-line" role="status" aria-live="polite">Listo cuando quieras</p>
 
     <textarea
       id="transcript"
       class="transcript-box"
       readonly
-      placeholder="Your transcript will appear here after you stop recording."
+      placeholder="Tu transcripción aparecerá aquí después de detener la grabación."
     ></textarea>
 
     <div class="actions">
-      <button id="download" class="secondary-button" disabled>Download .txt</button>
+      <button id="download" class="secondary-button" disabled>Descargar .txt</button>
     </div>
   </div>
   <script type="module" src="popup.js"></script>
