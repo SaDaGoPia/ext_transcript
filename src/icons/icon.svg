@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <rect x="0" y="0" width="128" height="128" rx="28" fill="#17181A" />
+  <!-- audio waveform -->
+  <rect x="22" y="48" width="12" height="32" rx="6" fill="#D97706" />
+  <rect x="40" y="34" width="12" height="60" rx="6" fill="#D97706" />
+  <rect x="58" y="44" width="12" height="40" rx="6" fill="#D97706" />
+  <!-- transcript lines -->
+  <rect x="80" y="42" width="32" height="12" rx="6" fill="#D97706" />
+  <rect x="80" y="58" width="32" height="12" rx="6" fill="#D97706" />
+  <rect x="80" y="74" width="20" height="12" rx="6" fill="#D97706" />
+</svg>

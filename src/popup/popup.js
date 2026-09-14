@@ -3,6 +3,7 @@ import { loadRecordingState, loadTranscript, saveTranscript } from '../lib/stora
 import { buildTranscriptFilename } from '../lib/filename.js';
 
 const startStopButton = document.getElementById('start-stop');
+const buttonLabel = document.getElementById('start-stop-label');
 const statusEl = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const downloadButton = document.getElementById('download');
@@ -10,10 +11,52 @@ const downloadButton = document.getElementById('download');
 let isRecording = false;
 let lastTranscript = null;
 let activeTabTitle = '';
+let elapsedTimerId = null;
 
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
+}
+
+function formatElapsed(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, '0')}`;
+}
+
+// 'default' | 'recording' | 'error' — keeps text and styling in sync so a
+// status message is never left with a stale color/weight from a prior state.
+function setStatus(text, variant = 'default') {
+  statusEl.textContent = text;
+  statusEl.classList.toggle('is-recording', variant === 'recording');
+  statusEl.classList.toggle('is-error', variant === 'error');
+}
+
+// A live timer during recording answers "is this actually still working?"
+// without the user having to guess through a long, silent wait.
+function startElapsedTimer(startedAt) {
+  stopElapsedTimer();
+  const tick = () => setStatus(`Recording… ${formatElapsed(Date.now() - startedAt)}`, 'recording');
+  tick();
+  elapsedTimerId = setInterval(tick, 1000);
+}
+
+function stopElapsedTimer() {
+  if (elapsedTimerId !== null) {
+    clearInterval(elapsedTimerId);
+    elapsedTimerId = null;
+  }
+}
+
+function setButtonState(state) {
+  // state: 'idle' | 'recording' | 'transcribing'
+  isRecording = state === 'recording';
+  startStopButton.classList.toggle('is-recording', state === 'recording');
+  startStopButton.classList.toggle('is-transcribing', state === 'transcribing');
+  startStopButton.disabled = state === 'transcribing';
+  buttonLabel.textContent = state === 'transcribing' ? 'Transcribing…' : 'Start Recording';
+  if (state === 'recording') buttonLabel.textContent = 'Stop Recording';
 }
 
 async function restoreTranscript() {
@@ -24,7 +67,7 @@ async function restoreTranscript() {
   activeTabTitle = cached.tabTitle;
   transcriptEl.value = cached.text;
   downloadButton.disabled = false;
-  statusEl.textContent = 'Done (restored)';
+  setStatus('Done — restored from your last recording');
   return true;
 }
 
@@ -35,10 +78,9 @@ async function restoreRecordingState() {
   const state = await loadRecordingState();
   if (!state?.inProgress) return false;
 
-  isRecording = true;
   activeTabTitle = state.tabTitle ?? activeTabTitle;
-  startStopButton.textContent = 'Stop Recording';
-  statusEl.textContent = 'Recording…';
+  setButtonState('recording');
+  startElapsedTimer(state.startedAt ?? Date.now());
   return true;
 }
 
@@ -46,54 +88,50 @@ startStopButton.addEventListener('click', async () => {
   if (!isRecording) {
     const tab = await getActiveTab();
     activeTabTitle = tab.title ?? 'transcript';
-    statusEl.textContent = 'Recording…';
-    startStopButton.textContent = 'Stop Recording';
-    isRecording = true;
+    setButtonState('recording');
+    startElapsedTimer(Date.now());
 
     try {
       const response = await chrome.runtime.sendMessage(
         createMessage(MessageType.POPUP_START_RECORDING, { tabId: tab.id, tabTitle: activeTabTitle })
       );
       if (isMessageOfType(response, MessageType.ERROR)) {
-        statusEl.textContent = `Error: ${response.payload.message}`;
-        isRecording = false;
-        startStopButton.textContent = 'Start Recording';
+        stopElapsedTimer();
+        setButtonState('idle');
+        setStatus(`Couldn't start recording — ${response.payload.message}`, 'error');
       }
     } catch (error) {
-      statusEl.textContent = `Error: ${error.message}`;
-      isRecording = false;
-      startStopButton.textContent = 'Start Recording';
+      stopElapsedTimer();
+      setButtonState('idle');
+      setStatus(`Couldn't start recording — ${error.message}`, 'error');
     }
   } else {
-    statusEl.textContent = 'Transcribing…';
-    startStopButton.disabled = true;
+    stopElapsedTimer();
+    setButtonState('transcribing');
+    setStatus('This can take a few minutes the first time');
 
     try {
       const response = await chrome.runtime.sendMessage(
         createMessage(MessageType.POPUP_STOP_RECORDING, { tabTitle: activeTabTitle })
       );
 
-      startStopButton.disabled = false;
-      startStopButton.textContent = 'Start Recording';
-      isRecording = false;
+      setButtonState('idle');
 
       if (isMessageOfType(response, MessageType.ERROR)) {
-        statusEl.textContent = `Error: ${response.payload.message}`;
+        setStatus(`Couldn't transcribe — ${response.payload.message}`, 'error');
         return;
       }
 
       lastTranscript = response.payload.text;
-      statusEl.textContent = 'Done';
+      setStatus('Done');
       transcriptEl.value = lastTranscript;
       downloadButton.disabled = false;
       // The offscreen document already saved this; re-saving the same data is
       // harmless and keeps this path working on its own if that ever changes.
       await saveTranscript({ text: lastTranscript, tabTitle: activeTabTitle });
     } catch (error) {
-      startStopButton.disabled = false;
-      startStopButton.textContent = 'Start Recording';
-      isRecording = false;
-      statusEl.textContent = `Error: ${error.message}`;
+      setButtonState('idle');
+      setStatus(`Couldn't transcribe — ${error.message}`, 'error');
     }
   }
 });
@@ -106,11 +144,14 @@ downloadButton.addEventListener('click', () => {
 });
 
 async function init() {
-  await restoreTranscript();
-  // Last, so an in-progress recording's status text wins over "Done (restored)".
-  await restoreRecordingState();
+  const hasTranscript = await restoreTranscript();
+  // Last, so an in-progress recording's status wins over "Done — restored…".
+  const isRecordingNow = await restoreRecordingState();
+  if (!hasTranscript && !isRecordingNow) {
+    setStatus('Ready when you are');
+  }
 }
 
 init().catch((error) => {
-  statusEl.textContent = `Error: ${error.message}`;
+  setStatus(`Error: ${error.message}`, 'error');
 });

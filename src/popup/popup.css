@@ -1,6 +1,277 @@
-body { width: 320px; font-family: system-ui, sans-serif; margin: 0; }
-.popup { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-textarea { width: 100%; height: 120px; resize: vertical; box-sizing: border-box; }
-.actions { display: flex; gap: 8px; }
-button:disabled { opacity: 0.5; cursor: not-allowed; }
-#folder-info { font-size: 12px; color: #555; }
+:root {
+  --bg: #f6f7f8;
+  --surface: #ffffff;
+  --text: #1c1d1f;
+  --text-secondary: #565b63;
+  --border: rgba(20, 22, 25, 0.12);
+  --accent: #d97706;
+  /* Lighter, not darker: the button text is dark, so hover must move away
+     from it, not toward it — darkening was cutting contrast, not adding feedback. */
+  --accent-hover: #e2891c;
+  --accent-contrast: #1c1d1f;
+  --danger: #dc2626;
+  --danger-tint: rgba(220, 38, 38, 0.09);
+  /* Darker than --danger specifically for text/border sitting on --danger-tint —
+     --danger itself only clears 4.5:1 against the plain --bg it's used on elsewhere. */
+  --danger-strong: #b91c1c;
+  --focus-ring: #1c1d1f;
+  --button-shadow: 0 1px 2px rgba(20, 22, 25, 0.16), 0 4px 10px rgba(20, 22, 25, 0.08);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17181a;
+    --surface: #202226;
+    --text: #edeef0;
+    --text-secondary: #a9afb6;
+    --border: rgba(255, 255, 255, 0.12);
+    --accent: #e08a1e;
+    --accent-hover: #ee9a2e;
+    --accent-contrast: #17181a;
+    --danger: #ef4444;
+    --danger-tint: rgba(239, 68, 68, 0.14);
+    /* Lighter than --danger on this side — dark surfaces need a brighter red
+       for contrast, the opposite direction from the light theme's --danger-strong. */
+    --danger-strong: #f87171;
+    --focus-ring: #edeef0;
+    /* A near-black shadow disappears on this background; a stronger,
+       wider spread plus a faint top highlight gives the button an edge
+       instead. */
+    --button-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 8px 18px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 340px;
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.popup {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-mark {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+}
+
+.app-mark rect:first-child {
+  fill: var(--text);
+}
+
+.app-mark .mark-accent {
+  fill: var(--accent);
+}
+
+.app-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+.primary-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  width: 100%;
+  padding: 12px 16px;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-weight: 600;
+  font-size: 15px;
+  cursor: pointer;
+  box-shadow: var(--button-shadow);
+  transition: background-color 150ms ease, transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+
+.primary-button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.primary-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.primary-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.primary-button:disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Idle-disabled (shouldn't normally happen, but keep a sane fallback). */
+.primary-button:disabled:not(.is-transcribing) {
+  opacity: 0.55;
+}
+
+.primary-button.is-recording {
+  background: var(--danger-tint);
+  color: var(--danger-strong);
+  border-color: var(--danger-strong);
+  box-shadow: none;
+}
+
+.primary-button.is-recording:hover:not(:disabled) {
+  background: var(--danger-tint);
+  filter: brightness(0.96);
+}
+
+/* Transcribing: still the accent color (this is still "working", not an
+   error or a neutral idle state) but breathing, so a multi-minute wait
+   never looks frozen. */
+.primary-button.is-transcribing {
+  animation: transcribing-breathe 1.8s ease-in-out infinite;
+}
+
+/* Animates background, not opacity — the label text must stay at full
+   contrast for the whole multi-minute wait, not dim with the field. */
+@keyframes transcribing-breathe {
+  0%, 100% {
+    background-color: var(--accent);
+  }
+  50% {
+    background-color: var(--accent-hover);
+  }
+}
+
+.record-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger-strong);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: opacity 150ms ease, transform 150ms ease;
+}
+
+.primary-button.is-recording .record-dot {
+  opacity: 1;
+  transform: scale(1);
+  animation: record-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes record-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-button.is-recording .record-dot,
+  .primary-button.is-transcribing {
+    animation: none;
+  }
+}
+
+.status-line {
+  margin: -6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.status-line.is-recording {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--danger-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.status-line.is-error {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.transcript-box {
+  width: 100%;
+  min-height: 128px;
+  max-height: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  resize: none;
+}
+
+.transcript-box::placeholder {
+  color: var(--text-secondary);
+}
+
+.transcript-box:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.actions {
+  display: flex;
+}
+
+.secondary-button {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: var(--bg);
+  border-color: var(--text-secondary);
+}
+
+.secondary-button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}

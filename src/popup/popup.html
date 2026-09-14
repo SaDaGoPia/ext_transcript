@@ -5,12 +5,58 @@
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+  <!--
+    THESIS: A quiet study tool, not an AI-hype gadget — one honest action
+    (record/stop), one honest result (a downloadable transcript), no
+    invented dashboard chrome.
+    OWN-WORLD: Restrained neutral surface (cool off-white / near-black
+    charcoal by theme) with one warm amber accent for the primary action
+    and mark; the recording state uses the universal red-dot convention,
+    never amber, so "recording" stays instantly legible.
+    STORY: User opens the popup mid-lecture, sees one clear button, starts
+    recording without hesitation, keeps listening while it records (a
+    live timer proves it's alive), stops, and downloads a transcript with
+    zero extra chrome.
+    FIRST VIEWPORT: A ~340px popup — small mark + wordmark header, one
+    full-width primary button as the dominant element, a quiet status
+    line with live elapsed time beneath it, transcript preview, and a
+    secondary download action at the bottom.
+    FORM: Operate-mode restrained utility, chosen directly per
+    new-work.md's local-extension carve-out (no concept roll) — single
+    accent, system typography, earned familiarity over novelty.
+    FINISH: unreviewed and undocumented is unfinished; this build ends
+    with the finish review, the verdict, and DESIGN.md
+  -->
   <div class="popup">
-    <button id="start-stop">Start Recording</button>
-    <p id="status">Idle</p>
-    <textarea id="transcript" readonly placeholder="Transcript will appear here…"></textarea>
+    <header class="app-header">
+      <svg class="app-mark" viewBox="0 0 128 128" aria-hidden="true">
+        <rect x="0" y="0" width="128" height="128" rx="28" />
+        <rect x="22" y="48" width="12" height="32" rx="6" class="mark-accent" />
+        <rect x="40" y="34" width="12" height="60" rx="6" class="mark-accent" />
+        <rect x="58" y="44" width="12" height="40" rx="6" class="mark-accent" />
+        <rect x="80" y="42" width="32" height="12" rx="6" class="mark-accent" />
+        <rect x="80" y="58" width="32" height="12" rx="6" class="mark-accent" />
+        <rect x="80" y="74" width="20" height="12" rx="6" class="mark-accent" />
+      </svg>
+      <h1 class="app-title">Tab Transcript</h1>
+    </header>
+
+    <button id="start-stop" class="primary-button">
+      <span class="record-dot" aria-hidden="true"></span>
+      <span id="start-stop-label">Start Recording</span>
+    </button>
+
+    <p id="status" class="status-line" role="status" aria-live="polite">Ready when you are</p>
+
+    <textarea
+      id="transcript"
+      class="transcript-box"
+      readonly
+      placeholder="Your transcript will appear here after you stop recording."
+    ></textarea>
+
     <div class="actions">
-      <button id="download" disabled>Download .txt</button>
+      <button id="download" class="secondary-button" disabled>Download .txt</button>
     </div>
   </div>
   <script type="module" src="popup.js"></script>

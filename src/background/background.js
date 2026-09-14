@@ -27,7 +27,7 @@ async function startRecording(tabId, tabTitle) {
   // must not turn a successful start into an ERROR the popup reports as "not recording".
   if (isMessageOfType(response, MessageType.RECORDING_STARTED)) {
     try {
-      await saveRecordingState({ inProgress: true, tabTitle });
+      await saveRecordingState({ inProgress: true, tabTitle, startedAt: Date.now() });
     } catch (error) {
       console.error('Failed to persist the recording-in-progress flag', error);
     }
