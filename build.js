@@ -1,5 +1,5 @@
 import { build } from 'esbuild';
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 const SRC = 'src';
@@ -48,6 +48,7 @@ async function rewriteOffscreenHtmlScriptTag() {
 }
 
 async function main() {
+  await rm(DIST, { recursive: true, force: true });
   await mkdir(DIST, { recursive: true });
   await copyStaticFiles();
   await bundleOffscreenScript();
