@@ -1,39 +1,21 @@
 import { MessageType, createMessage, isMessageOfType } from '../lib/messaging.js';
-import { loadDriveFolder, loadRecordingState, loadTranscript, saveTranscript } from '../lib/storage.js';
+import { loadRecordingState, loadTranscript, saveTranscript } from '../lib/storage.js';
 import { buildTranscriptFilename } from '../lib/filename.js';
 
 const startStopButton = document.getElementById('start-stop');
 const statusEl = document.getElementById('status');
 const transcriptEl = document.getElementById('transcript');
 const downloadButton = document.getElementById('download');
-const uploadButton = document.getElementById('upload');
-const folderInfoEl = document.getElementById('folder-info');
 
 let isRecording = false;
 let lastTranscript = null;
 let activeTabTitle = '';
-let hasDriveFolder = false;
 
 async function getActiveTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   return tab;
 }
 
-// Returns whether a Drive folder is configured. It deliberately does NOT touch
-// uploadButton.disabled — init() owns that decision so the two async restores
-// can't race each other into an inconsistent button state.
-async function refreshFolderInfo() {
-  const folder = await loadDriveFolder();
-  if (folder) {
-    folderInfoEl.innerHTML = `Uploading to: <b>${folder.name}</b> · <a href="https://drive.google.com/drive/folders/${folder.id}" target="_blank" rel="noopener">Open in Drive</a>`;
-    return true;
-  }
-  folderInfoEl.textContent = 'No Drive folder configured (see Options).';
-  return false;
-}
-
-// Returns whether a cached transcript was restored. See the note above about
-// uploadButton.disabled.
 async function restoreTranscript() {
   const cached = await loadTranscript();
   if (!cached) return false;
@@ -104,7 +86,6 @@ startStopButton.addEventListener('click', async () => {
       statusEl.textContent = 'Done';
       transcriptEl.value = lastTranscript;
       downloadButton.disabled = false;
-      uploadButton.disabled = !hasDriveFolder;
       // The offscreen document already saved this; re-saving the same data is
       // harmless and keeps this path working on its own if that ever changes.
       await saveTranscript({ text: lastTranscript, tabTitle: activeTabTitle });
@@ -124,33 +105,10 @@ downloadButton.addEventListener('click', () => {
   chrome.downloads.download({ url, filename, saveAs: false });
 });
 
-uploadButton.addEventListener('click', async () => {
-  uploadButton.disabled = true;
-  statusEl.textContent = 'Uploading to Drive…';
-  const filename = buildTranscriptFilename(activeTabTitle);
-
-  try {
-    const response = await chrome.runtime.sendMessage(
-      createMessage(MessageType.DRIVE_UPLOAD_REQUEST, { filename, content: lastTranscript })
-    );
-
-    uploadButton.disabled = false;
-    statusEl.textContent = isMessageOfType(response, MessageType.ERROR)
-      ? `Upload failed: ${response.payload.message}`
-      : 'Uploaded to Drive';
-  } catch (error) {
-    uploadButton.disabled = false;
-    statusEl.textContent = `Error: ${error.message}`;
-  }
-});
-
 async function init() {
-  const hasTranscript = await restoreTranscript();
-  hasDriveFolder = await refreshFolderInfo();
+  await restoreTranscript();
   // Last, so an in-progress recording's status text wins over "Done (restored)".
   await restoreRecordingState();
-
-  uploadButton.disabled = !hasTranscript || !hasDriveFolder;
 }
 
 init().catch((error) => {

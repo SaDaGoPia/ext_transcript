@@ -1,6 +1,5 @@
 import { MessageType, createMessage, isMessageOfType } from '../lib/messaging.js';
-import { clearRecordingState, loadDriveFolder, saveRecordingState } from '../lib/storage.js';
-import { uploadTranscriptToDrive } from '../lib/drive.js';
+import { clearRecordingState, saveRecordingState } from '../lib/storage.js';
 
 const OFFSCREEN_DOCUMENT_PATH = 'offscreen/offscreen.html';
 
@@ -54,16 +53,6 @@ async function stopRecording(tabTitle) {
   }
 }
 
-async function uploadToDrive(filename, content) {
-  const folder = await loadDriveFolder();
-  if (!folder) {
-    throw new Error('No Drive folder configured. Set one up in the extension options.');
-  }
-  const token = await chrome.identity.getAuthToken({ interactive: true });
-  const accessToken = token.token ?? token;
-  return uploadTranscriptToDrive({ accessToken, folderId: folder.id, filename, content });
-}
-
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (isMessageOfType(message, MessageType.POPUP_START_RECORDING)) {
     startRecording(message.payload.tabId, message.payload.tabTitle)
@@ -75,13 +64,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (isMessageOfType(message, MessageType.POPUP_STOP_RECORDING)) {
     stopRecording(message.payload.tabTitle)
       .then((response) => sendResponse(response))
-      .catch((error) => sendResponse(createMessage(MessageType.ERROR, { message: error.message })));
-    return true;
-  }
-
-  if (isMessageOfType(message, MessageType.DRIVE_UPLOAD_REQUEST)) {
-    uploadToDrive(message.payload.filename, message.payload.content)
-      .then(() => sendResponse(createMessage(MessageType.DRIVE_UPLOAD_DONE)))
       .catch((error) => sendResponse(createMessage(MessageType.ERROR, { message: error.message })));
     return true;
   }

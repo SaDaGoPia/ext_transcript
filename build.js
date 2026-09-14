@@ -11,7 +11,6 @@ async function copyStaticFiles() {
     'icons',
     'background',
     'popup',
-    'options',
     'lib',
     'offscreen/offscreen.html',
   ];

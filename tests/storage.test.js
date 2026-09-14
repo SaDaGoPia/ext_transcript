@@ -1,6 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { saveTranscript, loadTranscript, saveDriveFolder, loadDriveFolder } from '../src/lib/storage.js';
+import {
+  saveTranscript,
+  loadTranscript,
+  saveRecordingState,
+  loadRecordingState,
+  clearRecordingState,
+} from '../src/lib/storage.js';
 
 function createFakeStorageArea() {
   const data = {};
@@ -20,12 +26,19 @@ test('loadTranscript returns null when nothing stored', async () => {
   assert.equal(await loadTranscript(createFakeStorageArea()), null);
 });
 
-test('saveDriveFolder/loadDriveFolder round-trip through a storage area', async () => {
+test('saveRecordingState/loadRecordingState round-trip through a storage area', async () => {
   const area = createFakeStorageArea();
-  await saveDriveFolder({ id: 'folder123', name: 'Transcripts' }, area);
-  assert.deepEqual(await loadDriveFolder(area), { id: 'folder123', name: 'Transcripts' });
+  await saveRecordingState({ inProgress: true, tabTitle: 'Demo' }, area);
+  assert.deepEqual(await loadRecordingState(area), { inProgress: true, tabTitle: 'Demo' });
 });
 
-test('loadDriveFolder returns null when nothing stored', async () => {
-  assert.equal(await loadDriveFolder(createFakeStorageArea()), null);
+test('loadRecordingState returns null when nothing stored', async () => {
+  assert.equal(await loadRecordingState(createFakeStorageArea()), null);
+});
+
+test('clearRecordingState resets a previously saved state to null', async () => {
+  const area = createFakeStorageArea();
+  await saveRecordingState({ inProgress: true, tabTitle: 'Demo' }, area);
+  await clearRecordingState(area);
+  assert.equal(await loadRecordingState(area), null);
 });
